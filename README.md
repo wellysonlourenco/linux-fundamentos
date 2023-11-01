@@ -391,20 +391,275 @@ DIO Linux do Zero: guia de comandos. Aqui estão, resumidamente, todos os comand
         `nano index.html`
         - Este servidor estará apenas habilitado localmente (apenas na sua rede). Para disponibilizar mundialmente, é necessário conectar por meio de um servidor (AWS, por exemplo)
 
+---
 
 
-- Servidor Proxy
-- Instale o squid
-        `sudo apt-get install squid`
-- Configure o Squid editando o arquivo de configuração /etc/squid/squid.conf.d
-- Defina regras de acesso, políticas de segurança e autenticação de acordo com suas necessidades.
--Inicie e habilite o Squid para ser executado na inicialização: `sudo systemctl start squid` e `sudo systemctl enable squid`.
+1. **Instale o Servidor DHCP**:
+   
+   Certifique-se de que o servidor DHCP esteja instalado na máquina. Você pode usar o servidor DHCP ISC (Internet Systems Consortium), que é comumente usado no Debian. Se ainda não estiver instalado, execute o seguinte comando:
+
+   ```bash
+   sudo apt-get install isc-dhcp-server
+   ```
+
+2. **Configurar o DHCP Server**:
+
+   Edite o arquivo de configuração `/etc/dhcp/dhcpd.conf` para configurar o servidor DHCP:
+
+   ```bash
+   sudo nano /etc/dhcp/dhcpd.conf
+   ```
+
+   Dentro do arquivo de configuração, você pode adicionar a configuração para a rede interna, como abaixo:
+
+   ```plaintext
+   subnet 192.168.10.0 netmask 255.255.255.0 {
+       range 192.168.10.100 192.168.10.200;
+       option routers 192.168.10.1;
+       option domain-name-servers 8.8.8.8, 8.8.4.4;
+   }
+   ```
+
+   - `subnet 192.168.10.0 netmask 255.255.255.0` define a rede e a máscara de sub-rede.
+   - `range 192.168.10.100 192.168.10.200` define a faixa de endereços IP que o servidor DHCP pode atribuir aos clientes na rede interna.
+   - `option routers 192.168.10.1` define o gateway padrão.
+   - `option domain-name-servers 8.8.8.8, 8.8.4.4` define os servidores DNS a serem fornecidos aos clientes.
+
+3. **Configurar a Interface de Rede Interna**:
+
+   Você precisa atribuir o endereço IP à interface de rede interna (por exemplo, eth1) e configurá-la para que o servidor DHCP responda a solicitações nessa interface. Edite o arquivo de configuração da interface:
+
+   ```bash
+   sudo nano /etc/network/interfaces
+   ```
+
+   Adicione as configurações para a interface de rede interna:
+
+   ```plaintext
+   auto eth1
+   iface eth1 inet static
+       address 192.168.10.1
+       netmask 255.255.255.0
+   ```
+
+   Reinicie a interface de rede:
+
+   ```bash
+   sudo ifdown eth1
+   sudo ifup eth1
+   ```
+
+4. **Iniciar e Habilitar o Servidor DHCP**:
+
+   Inicie o servidor DHCP e configure-o para ser executado na inicialização:
+
+   ```bash
+   sudo systemctl start isc-dhcp-server
+   sudo systemctl enable isc-dhcp-server
+   ```
+
+Agora, seu servidor DHCP estará configurado para atribuir endereços IP na faixa 192.168.10.0/24 à rede interna. Certifique-se de que o roteamento esteja configurado corretamente se você desejar que os dispositivos da rede interna acessem a rede NAT e a Internet. Além disso, ajuste as configurações de firewall, se necessário, para permitir o tráfego entre as redes interna e NAT.
+
+---
+
+**DHCP
+
+1. **Instale o servidor SSH no Linux:**
+
+   Certifique-se de que o servidor SSH esteja instalado no seu servidor Linux. Geralmente, o OpenSSH é a escolha mais comum. Você pode verificar se o OpenSSH está instalado e instalá-lo, se necessário, usando os seguintes comandos:
+
+   ```bash
+   sudo apt update
+   sudo apt install openssh-server
+   ```
+
+2. **Configurar o servidor SSH:**
+
+   Por padrão, o OpenSSH é configurado para permitir acesso por senha. É altamente recomendável que você configure a autenticação baseada em chave, pois isso é mais seguro. No entanto, se desejar manter a autenticação por senha, siga estas etapas para configurar o servidor SSH.
+
+   Abra o arquivo de configuração do SSH:
+
+   ```bash
+   sudo nano /etc/ssh/sshd_config
+   ```
+
+   Certifique-se de que as seguintes linhas estejam configuradas da seguinte forma:
+
+   ```plaintext
+   PasswordAuthentication yes
+   PermitRootLogin no
+   ```
+
+   - `PasswordAuthentication` deve ser definido como `yes` se você quiser permitir a autenticação por senha. Se preferir usar autenticação baseada em chave, configure esta opção como `no`.
+   - `PermitRootLogin` deve ser configurado como `no` para desabilitar o acesso direto como root.
+
+   Após fazer as alterações, salve o arquivo e saia do editor de texto.
+
+3. **Reinicie o Serviço SSH:**
+
+   Após fazer as alterações na configuração, reinicie o serviço SSH para que as alterações tenham efeito:
+
+   ```bash
+   sudo systemctl restart ssh
+   ```
+
+4. **Encontre o Endereço IP do Servidor Linux:**
+
+   Anote o endereço IP do servidor Linux para poder se conectar a ele.
+
+5. **Baixe e Instale o PuTTY:**
+
+   Baixe o PuTTY no site oficial (https://www.chiark.greenend.org.uk/~sgtatham/putty/latest.html) e instale-o no seu computador Windows.
+
+6. **Conecte-se ao Servidor Linux usando o PuTTY:**
+
+   Abra o PuTTY e siga estas etapas:
+
+   - Insira o endereço IP do servidor Linux na caixa "Host Name (or IP address)".
+   - Certifique-se de que a porta esteja configurada para 22 (a porta padrão para SSH).
+   - Escolha "SSH" como o tipo de conexão.
+   - Clique em "Open" para iniciar a conexão.
+
+   Se você estiver usando a autenticação por senha, o PuTTY solicitará a senha do usuário. Se estiver usando a autenticação baseada em chave, certifique-se de que sua chave privada esteja configurada no PuTTY (no menu "Connection" > "SSH" > "Auth").
+
+Pronto! Agora você está conectado ao seu servidor Linux usando o PuTTY via SSH. Certifique-se de que a configuração de autenticação e segurança esteja de acordo com as melhores práticas para manter seu servidor seguro.
 
 
-- Servidor DHCP:
-Instale o Servidor DHCP:
+---
 
-Certifique-se de que o servidor DHCP esteja instalado na máquina. Você pode usar o servidor DHCP ISC (Internet Systems Consortium), que é comumente usado no Debian. Se ainda não estiver instalado, execute o seguinte comando:
-`sudo apt-get install isc-dhcp-server`
+** PROXY
+
+**Nota:** Antes de configurar um servidor proxy, certifique-se de que você tem autorização para fazê-lo e que está ciente das políticas de segurança da sua organização.
+
+Aqui estão os passos para configurar um servidor proxy Squid:
+
+1. **Instale o Squid:**
+
+   Se o Squid ainda não estiver instalado, você pode fazê-lo com o seguinte comando:
+
+   ```bash
+   sudo apt-get update
+   sudo apt-get install squid
+   ```
+
+2. **Configurar o Squid:**
+
+   O arquivo de configuração principal do Squid está localizado em `/etc/squid/squid.conf`. Você pode editar este arquivo usando um editor de texto, como o `nano` ou o `vim`. 
+
+   ```bash
+   sudo nano /etc/squid/squid.conf
+   ```
+
+3. **Configurar as Opções Básicas:**
+
+   Você pode definir opções básicas no arquivo de configuração do Squid. Aqui está um exemplo de configuração simples:
+
+   ```plaintext
+   # Define a porta em que o Squid irá escutar as solicitações de proxy.
+   http_port 3128
+
+   # Defina o nome da máquina do servidor proxy.
+   visible_hostname myproxyserver
+
+   # Permita o acesso somente a clientes na rede local.
+   acl localnet src 192.168.1.0/24
+   http_access allow localnet
+   ```
+
+   Lembre-se de personalizar as configurações de acordo com suas necessidades, como a porta, o nome do servidor, a faixa de IPs da rede local, etc.
+
+5. **Reiniciar o Squid:**
+
+   Após fazer as alterações no arquivo de configuração, reinicie o serviço do Squid para aplicar as configurações:
+
+   ```bash
+   sudo systemctl restart squid
+   ```
+
+6. **Configurar Clientes para Usar o Proxy:**
+
+   Agora, você precisa configurar os clientes para usar o proxy Squid. Isso geralmente é feito nas configurações do navegador ou nas configurações de rede dos clientes.
+
+Após seguir essas etapas, você terá um servidor proxy Squid básico em funcionamento. Certifique-se de ajustar a configuração de acordo com as necessidades específicas da sua rede e de implementar medidas de segurança apropriadas.
 
 
+---
+
+- SERVIDOR FTP
+
+
+**Passo 1: Instalar o vsftpd**
+
+Abra um terminal e execute os seguintes comandos como superusuário ou com "sudo" (substitua "seu_usuario" pelo seu nome de usuário):
+
+```bash
+sudo apt update
+sudo apt install vsftpd
+```
+
+Isso irá atualizar a lista de pacotes disponíveis e instalar o servidor FTP vsftpd.
+
+**Passo 2: Configurar o vsftpd**
+
+Após a instalação, você precisa configurar o vsftpd de acordo com suas necessidades. O arquivo de configuração do vsftpd está localizado em `/etc/vsftpd.conf`. Você pode editá-lo com um editor de texto, como o nano:
+
+```bash
+sudo nano /etc/vsftpd.conf
+```
+
+Dentro do arquivo de configuração, você pode ajustar várias opções, como as seguintes configurações comuns:
+
+- Habilitar ou desabilitar o acesso anônimo:
+
+  ```
+  anonymous_enable=NO
+  ```
+
+- Definir o diretório raiz para os usuários:
+
+  ```
+  local_root=/home/seu_usuario
+  ```
+
+- Permitir gravação de arquivos:
+
+  ```
+  write_enable=YES
+  ```
+
+Altere essas configurações de acordo com suas necessidades. Salve o arquivo após fazer as alterações.
+
+**Passo 3: Reiniciar o vsftpd**
+
+Após a configuração, reinicie o serviço vsftpd para aplicar as alterações:
+
+```bash
+sudo systemctl restart vsftpd
+```
+
+**Passo 4: Abrir as portas FTP no firewall**
+
+Se você estiver usando um firewall, certifique-se de abrir as portas FTP (geralmente 20 e 21) para permitir a comunicação com o servidor FTP. Dependendo do firewall que você está usando, os comandos podem variar. Por exemplo, para abrir as portas no iptables, você pode usar algo como:
+
+```bash
+sudo iptables -A INPUT -p tcp --dport 20 -j ACCEPT
+sudo iptables -A INPUT -p tcp --dport 21 -j ACCEPT
+```
+
+**Passo 5: Criar contas de usuário FTP**
+
+Para permitir que os usuários acessem seu servidor FTP, você precisa criar contas de usuário no sistema. Use o seguinte comando para adicionar um novo usuário (substitua "nome_do_usuario" pelo nome de usuário desejado):
+
+```bash
+sudo adduser nome_do_usuario
+```
+
+Defina uma senha forte para o usuário quando solicitado.
+
+**Passo 6: Testar a conexão FTP**
+
+Agora que seu servidor FTP está configurado, você pode testar a conexão de um cliente FTP. Use um cliente FTP, como o FileZilla, ou o cliente de linha de comando `ftp` para se conectar ao servidor FTP.
+
+Certifique-se de usar o nome de usuário e a senha que você criou para acessar o servidor FTP.
+
+Com esses passos, você deve ter um servidor FTP funcionando no seu sistema Debian Linux. Lembre-se de configurar a segurança apropriada, como o uso de FTP seguro (FTP sobre TLS/SSL), e de restringir o acesso apenas aos diretórios necessários para garantir a segurança do servidor.
